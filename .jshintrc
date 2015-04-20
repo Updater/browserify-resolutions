@@ -1,0 +1,8 @@
+{
+  "quotmark": "single",
+  "undef": true,
+  "unused": true,
+  "devel": true,
+  "maxlen": 120,
+  "node": true
+}
