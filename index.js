@@ -6,11 +6,11 @@ exports = module.exports =
   function(bundler, options) {
     return bundler
       .plugin(dedupeCache)
-      .plugin(dedupeResolution, options);
+      .plugin(dedupeResolutions, options);
   };
 
   exports.dedupeCache = dedupeCache;
-  exports.dedupeResolution = dedupeResolution;
+  exports.dedupeResolutions = dedupeResolutions;
 
   /**
    * Custom Browserify deduper that exports the already instantiated module instead of
@@ -68,7 +68,7 @@ exports = module.exports =
   }
 
   /**
-   * "Bower resolution" for Browserify... sort of. Browserify/`npm dedupe` currently only dedupes
+   * "Bower resolutions" for Browserify... sort of. Browserify/`npm dedupe` currently only dedupes
    * modules that are exactly identical, i.e. by checksum or version number. That's fine for Node,
    * but not great for the browser where we try to create the slimmest possible packages. If a bundle's
    * dependencies include multiple versions of the same module, Browserify will bundle them all anyway.
@@ -81,7 +81,7 @@ exports = module.exports =
    * @param  {Object} bundler Browserify instance.
    * @param  {Array/String}  options List of modules to resolve a version for or "*" to attempt to resolve all.
    */
-  function dedupeResolution(bundler, options) {
+  function dedupeResolutions(bundler, options) {
     var modules = {};
     var resolved = {};
     var deduped = {};

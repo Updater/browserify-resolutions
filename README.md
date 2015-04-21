@@ -1,4 +1,4 @@
-#browserify-resolution [![build status](https://travis-ci.org/Updater/browserify-resolution.svg?branch=master)](https://travis-ci.org/Updater/browserify-resolution)
+#browserify-resolutions [![build status](https://travis-ci.org/Updater/browserify-resolution.svg?branch=master)](https://travis-ci.org/Updater/browserify-resolutions)
 [Bower resolutions](http://jaketrent.com/post/bower-resolutions/) for npm + Browserify... sort of. 
 
 A Browserify plugin that allows more explicit control of module deduping. It purges duplicate modules from the output bundle and prevents modules from loading several times.
@@ -24,19 +24,19 @@ WARNING: Tried to load angular more than once.
 Pass either an array of package names to dedupe or "*" to dedupe everything possible.
 
 ```javascript
-var resolution = require('browserify-resolution');
+var resolutions = require('browserify-resolutions');
 ```
 
 ```javascript
 // Dedupe Angular
 browserify(options)
-  .plugin(resolution, ['angular'])
+  .plugin(resolutions, ['angular'])
   .bundle();
 ```
 
 ```javascript
 // Dedupe everything possible
 browserify(options)
-  .plugin(resolution, ['*'])
+  .plugin(resolutions, ['*'])
   .bundle();
 ```
