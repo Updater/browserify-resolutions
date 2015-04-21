@@ -1,4 +1,4 @@
-#browserify-resolutions [![build status](https://travis-ci.org/Updater/browserify-resolution.svg?branch=master)](https://travis-ci.org/Updater/browserify-resolutions)
+#browserify-resolutions [![build status](https://travis-ci.org/Updater/browserify-resolutions.svg?branch=master)](https://travis-ci.org/Updater/browserify-resolutions)
 [Bower resolutions](http://jaketrent.com/post/bower-resolutions/) for npm + Browserify... sort of. 
 
 A Browserify plugin that allows more explicit control of module deduping. It purges duplicate modules from the output bundle and prevents modules from loading several times.

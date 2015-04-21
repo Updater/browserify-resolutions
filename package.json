@@ -4,6 +4,13 @@
   "description": "",
   "main": "index.js",
   "license": "MIT",
+  "description:" "A Browserify plugin that allows more explicit control of module deduping. It purges duplicate modules from the output bundle and prevents modules from loading several times.",
+  "keywords": [
+    "browserify",
+    "resolutions",
+    "dedupe",
+    "duplication"
+  ],
   "scripts": {
     "test": "mocha"
   },
