@@ -37,6 +37,6 @@ browserify(options)
 ```javascript
 // Dedupe everything possible
 browserify(options)
-  .plugin(resolutions, ['*'])
+  .plugin(resolutions, '*')
   .bundle();
 ```
