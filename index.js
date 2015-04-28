@@ -1,9 +1,15 @@
 var _         = require('lodash');
 var through   = require('through2');
 
+var resolved;
+
 exports = module.exports =
 
   function(bundler, options) {
+    options = parseOptions(options);
+
+    resolved = {};
+
     return bundler
       .plugin(dedupeCache)
       .plugin(dedupeResolutions, options);
@@ -11,6 +17,19 @@ exports = module.exports =
 
   exports.dedupeCache = dedupeCache;
   exports.dedupeResolutions = dedupeResolutions;
+
+  function parseOptions(options) {
+    if(options === '*') {
+      return options;
+    }
+    else if(_.isString(options)) {
+      return [options];
+    } else if(!_.isArray(options)) {
+      return [];
+    } else {
+      return options;
+    }
+  }
 
   /**
    * Custom Browserify deduper that exports the already instantiated module instead of
@@ -45,7 +64,7 @@ exports = module.exports =
           stringId = JSON.stringify(id);
 
           // For safety, only cache modules without own dependencies (see `Note` above).
-          if (_.isEmpty(row.deps)) {
+          if (resolved[row.dedupe] && _.isEmpty(row.deps)) {
             row.source = 'module.exports = require(' + stringId + ');';
 
           } else {
@@ -83,13 +102,10 @@ exports = module.exports =
    */
   function dedupeResolutions(bundler, options) {
     var modules = {};
-    var resolved = {};
     var deduped = {};
     var deps = {};
     var index = {};
     var rows = [];
-
-    options = options || [];
 
     bundler.pipeline.on('package', function(package) {
       var name = package.name;
