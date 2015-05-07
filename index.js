@@ -2,6 +2,7 @@ var _         = require('lodash');
 var through   = require('through2');
 
 var resolved;
+var deduped;
 
 exports = module.exports =
 
@@ -9,6 +10,7 @@ exports = module.exports =
     options = parseOptions(options);
 
     resolved = {};
+    deduped = {};
 
     return bundler
       .plugin(dedupeCache)
@@ -39,13 +41,14 @@ exports = module.exports =
    * Solves: Libraries like Angular executing multiple times even if there's only a single
    * copy included in the bundle. Fortunately Angular warns us when this happens.
    *
-   * Note: For safety, we only apply caching if the module has no dependencies of its own.
-   * Even if sources are identical, two modules could require differently versioned depdencies.
-   * Case in point, Angular's CJS entry point index.js, basically a shim that `require`s the main
-   * Angular source. This shim module will likely stay identical between many Angular versions.
+   * Note: For safety, we only apply caching if the module dependencies are either all dupes too
+   * (or has no dependencies). Even if two source file are identical, they could be requiring
+   * different versions of the same dependencies. Case in point, Angular's CJS entry point index.js,
+   * basically a shim that `require`s the main Angular source. This shim module will likely stay
+   * identical for many Angular versions, while the actual source is different for all versions.
    *
    * E.g.: If we have two or more Angular versions bundled, their `index.js`s are likely indentical
-   * and will be deduped. If we cache `index.js`, all `require('angular')`s will then return the same
+   * and will be deduped. If we cached `index.js`, all `require('angular')`s will then return the same
    * Angular version; the one associated with the first `index.js` that the deduper comes across.
    * The bundle would still include multiple Angular versions since `angular.js`, the main source,
    * is different between all versions and not deduped.
@@ -63,10 +66,10 @@ exports = module.exports =
         if (id) {
           stringId = JSON.stringify(id);
 
-          // For safety, only cache modules without own dependencies (see `Note` above).
-          if (resolved[row.dedupe] && _.isEmpty(row.deps)) {
-            row.source = 'module.exports = require(' + stringId + ');';
 
+          // For safety, only cache modules which dependencies are also all duped (or it has none).
+          if (resolved[row.dedupe] && _.values(row.deps).every(isDuped)) {
+            row.source = 'module.exports = require(' + stringId + ');';
           } else {
             // Default browserify dedupe.
             row.source = 'arguments[4][' + stringId + '][0].apply(exports,arguments)';
@@ -82,6 +85,10 @@ exports = module.exports =
         this.push(row);
         next();
       }));
+
+    function isDuped(id) {
+      return !!deduped[id];
+    }
 
     return bundler;
   }
@@ -102,7 +109,6 @@ exports = module.exports =
    */
   function dedupeResolutions(bundler, options) {
     var modules = {};
-    var deduped = {};
     var deps = {};
     var index = {};
     var rows = [];
