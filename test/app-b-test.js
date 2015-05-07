@@ -9,6 +9,12 @@ describe('when bundling app-b', function() {
   // --------------------------
   var expectedBundledLibs = {};
 
+  expectedBundledLibs.vanilla = [
+    'lib-a-1.0.0',
+    'lib-a-2.0.0',
+    'lib-b-1.0.0'
+  ].sort();
+
   expectedBundledLibs['lib-a'] = [
     'lib-a-1.0.0',
     'lib-b-1.0.0'
@@ -18,10 +24,8 @@ describe('when bundling app-b', function() {
   // --------------------------
   var expectedExecutedLibs = {};
 
-  expectedExecutedLibs['lib-a'] = [
-    'lib-a-1.0.0',
-    'lib-b-1.0.0'
-  ].sort();
+  expectedExecutedLibs.vanilla = expectedBundledLibs.vanilla;
+  expectedExecutedLibs['lib-a'] = expectedBundledLibs['lib-a'];
 
   // Tests
   // --------------------------
@@ -31,6 +35,24 @@ describe('when bundling app-b', function() {
     libs = [];
     bundler = browserify({
       entries: ['./test/app-b']
+    });
+  });
+
+  describe('using vanilla browserify', function() {
+    it('dedupes identical sources', function(done) {
+      bundler
+        .bundle(bundleCallback(function(bundledLibs) {
+          expect(bundledLibs.sort()).to.eql(expectedBundledLibs.vanilla);
+          done();
+        }));
+    });
+
+    it('executes deduped sources', function(done) {
+      bundler
+        .bundle(bundleCallback(function() {
+          expect(libs.sort()).to.eql(expectedExecutedLibs.vanilla);
+          done();
+        }));
     });
   });
 
