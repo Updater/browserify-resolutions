@@ -66,7 +66,6 @@ exports = module.exports =
         if (id) {
           stringId = JSON.stringify(id);
 
-
           // For safety, only cache modules which dependencies are also all duped (or it has none).
           if (resolved[row.dedupe] && _.values(row.deps).every(isDuped)) {
             row.source = 'module.exports = require(' + stringId + ');';
