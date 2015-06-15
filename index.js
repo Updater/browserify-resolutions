@@ -187,15 +187,18 @@ exports = module.exports =
           next();
         },
         function end(cb) {
+          // Array of ids for files that we're treating as originals.
+          var originals = _.values(deduped).concat(_.keys(resolved));
+
           _.each(rows, function(row) {
             var file = row.file;
 
             if (deduped[file]) {
               row.dedupe = deduped[file];
               row.dedupeIndex = index[deduped[file]];
-            } else if (resolved[file]) {
-              // If we deemed this file the "original", remove any dedupe info Browserify's default algorithm
-              // might have set to avoid circular references.
+            } else if (originals.indexOf(file) !== -1) {
+              // Prevent Browserify's default dedupe algorithm from creating circular dependencies
+              // by not allowing it to dedupe files which we're considering "originals".
               delete row.dedupe;
               delete row.dedupeIndex;
             }
