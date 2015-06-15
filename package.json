@@ -1,6 +1,6 @@
 {
   "name": "browserify-resolutions",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A Browserify plugin that allows more explicit control of module deduping. It purges duplicate modules from the output bundle and prevents modules from loading several times.",
   "main": "index.js",
   "license": "MIT",
