@@ -1,5 +1,6 @@
 var expect = require('chai').expect;
 var browserify = require('browserify');
+var watchify = require('watchify');
 var resolutions = require('../index');
 var bundleCallback = require('./utils').bundleCallback;
 
@@ -154,9 +155,9 @@ describe('when bundling app-a', function() {
     });
 
     describe('and passing *', function() {
-      it('bundles and executes all packages once', function(done) {
-        var options = '*';
+      var options = '*';
 
+      it('bundles and executes all packages once', function(done) {
         bundler
           .plugin(resolutions, options)
           .bundle(bundleCallback(function(bundledLibs) {
@@ -165,12 +166,37 @@ describe('when bundling app-a', function() {
             done();
           }));
       });
+
+      // Integration test to verify that the plugin is watchify-compatible.
+      // Piggy-backing off of the '*'-option test b/c its more likely to expose flaws.
+      //
+      // TODO: Fails randomly due to the non-deterministic order in which `moduleDeps`'s' `package` event
+      // is dispatching cached packages. As browserify-resolutions currently uses the first package it
+      // comes across as the "original" and marks all other dupes, it makes the result non-deterministic as well.
+      describe('and is rebundled with watchify', function() {
+        it('produces the same bundle as the first time', function(done) {
+          bundler._options.cache = {};
+          bundler._options.packageCache = {};
+          bundler = watchify(bundler);
+
+          bundler
+            .plugin(resolutions, options)
+            .bundle(function() {
+              bundler
+                .bundle(bundleCallback(function(bundledLibs) {
+                  expect(bundledLibs.sort()).to.eql(expectedBundledLibs[options]);
+                  expect(libs.sort()).to.eql(expectedExecutedLibs[options]);
+                  done();
+                }));
+            });
+        });
+      });
     });
 
     describe('and passing a matching package name that is a subset of another', function() {
-      it('dedupes only the matching package name, not the superset', function(done) {
-        var options = ['lib-a'];
+      var options = ['lib-a'];
 
+      it('dedupes only the matching package name, not the superset', function(done) {
         bundler
           .plugin(resolutions, options)
           .bundle(bundleCallback(function(bundledLibs) {
@@ -178,6 +204,23 @@ describe('when bundling app-a', function() {
             expect(libs.sort()).to.eql(expectedExecutedLibs[options]);
             done();
           }));
+      });
+
+      // Test to verify that calling bundle() twice consecutively works, in general.
+      // No specific reason its mirroring the test above, just piggy-backing off a verified result.
+      describe('and calling bundle a second time', function() {
+        it('produces the same bundle as the first time', function(done) {
+          bundler
+            .plugin(resolutions, options)
+            .bundle();
+
+          bundler
+            .bundle(bundleCallback(function(bundledLibs) {
+              expect(bundledLibs.sort()).to.eql(expectedBundledLibs[options]);
+              expect(libs.sort()).to.eql(expectedExecutedLibs[options]);
+              done();
+            }));
+        });
       });
     });
   });

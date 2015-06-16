@@ -1,24 +1,41 @@
 var _         = require('lodash');
 var through   = require('through2');
+var join      = require('path').join;
 
-var resolved;
-var deduped;
+// Exports
+// ________________________
 
 exports = module.exports =
 
-  function(bundler, options) {
-    options = parseOptions(options);
+  /**
+   * Entry point for the two plugins that comprise browserify-resolutions.
+   * See below for detailed write-ups on each.
+   *
+   * @param  {Object} bundler Browserify instance.
+   * @param  {Array/String} packageMatcher List of modules to resolve a version for or
+   *                                       "*" to attempt to resolve all.
+   * @return {Object} Browserify instance.
+   */
+  function(bundler, packageMatcher) {
+    packageMatcher = parseOptions(packageMatcher);
 
-    resolved = {};
-    deduped = {};
+    function applyPlugins() {
+      var options = {
+        deduped: {},
+        resolved: {},
+        packageMatcher: packageMatcher
+      };
 
-    return bundler
-      .plugin(dedupeCache)
-      .plugin(dedupeResolutions, options);
+      return bundler
+        .plugin(dedupeCache, options)
+        .plugin(dedupeResolutions, options);
+    }
+
+    // Must re-attach plugins every time Browserify `reset`s as a new pipeline is created.
+    bundler.on('reset', applyPlugins);
+
+    return applyPlugins();
   };
-
-  exports.dedupeCache = dedupeCache;
-  exports.dedupeResolutions = dedupeResolutions;
 
   function parseOptions(options) {
     if(options === '*') {
@@ -32,6 +49,9 @@ exports = module.exports =
       return options;
     }
   }
+
+// Plugin implementations
+// ________________________
 
   /**
    * Custom Browserify deduper that exports the already instantiated module instead of
@@ -54,10 +74,11 @@ exports = module.exports =
    * is different between all versions and not deduped.
    *
    * Note II: This method otherwise mimics Browserify's own to make sure nothing breaks.
-   *
-   * @param  {Object} bundler Browserify instance.
    */
-  function dedupeCache(bundler) {
+  function dedupeCache(bundler, options) {
+    var resolved = options.resolved;
+    var deduped = options.deduped;
+
     bundler.pipeline.get('dedupe')
       .splice(0, 1, through.obj(function(row, enc, next) {
         var id = row.dedupe && !row.dedupeIndex ? row.dedupe : row.dedupeIndex;
@@ -103,30 +124,50 @@ exports = module.exports =
    * Currently, the given version is the first one that Browserify parses. Typically, that is the desired one.
    * TODO: Allow choosing a specific module version to bundle.
    *
-   * @param  {Object} bundler Browserify instance.
-   * @param  {Array/String}  options List of modules to resolve a version for or "*" to attempt to resolve all.
    */
   function dedupeResolutions(bundler, options) {
     var modules = {};
-    var deps = {};
-    var index = {};
-    var rows = [];
+    var deps    = {};
+    var index   = {};
+    var rows    = [];
 
-    bundler.pipeline.on('package', function(package) {
-      var name = package.name;
+    var resolved        = options.resolved;
+    var deduped         = options.deduped;
+    var packageMatcher  = options.packageMatcher;
+    var packageCache    = bundler._options.packageCache;
 
-      // Does this package represent the module we're trying to resolve a version for?
-      if (name && (options.indexOf(name) !== -1 || options === '*')) {
-        // Assume (safely?) that the first file emitted after a package is that package's `main`.
-        bundler.pipeline.once('file', function(file) {
-          modules[name] = modules[name] || [];
-          modules[name].push(file);
+    bundler.pipeline.on('package', packageListener);
 
-          // Flag to grab these dependencies when available in our 'deps' stream handler.
-          deps[file] = true;
-        });
+    function packageListener(package) {
+      if (isResolvablePackage(package)) {
+        if (isCachedPackage(package)) {
+          groupByPackage(package, join(package.__dirname, package.main));
+        } else {
+          // Assuming first processed after this package is its `main`. Intead of just parsing out
+          // `main` ourselves, let `module-deps` handle it since it may be a custom field.
+          bundler.pipeline.once('file', _.partial(groupByPackage, package));
+        }
       }
-    });
+
+      function isResolvablePackage(package) {
+        return package.main && package.name &&
+          (packageMatcher.indexOf(package.name) !== -1 || packageMatcher === '*');
+      }
+
+      function isCachedPackage(package) {
+        var packagePath = join(package.__dirname, 'package.json');
+        return packageCache && packageCache.hasOwnProperty(packagePath);
+      }
+
+      // Group all `main`s by their package name.
+      function groupByPackage(package, file) {
+        modules[package.name] = modules[package.name] || [];
+        modules[package.name].push(file);
+
+        // Flag to grab these dependencies when available in our 'deps' stream handler.
+        deps[file] = true;
+      }
+    }
 
     bundler.pipeline.get('deps')
       .push(through.obj(
@@ -188,7 +229,11 @@ exports = module.exports =
         },
         function end(cb) {
           // Array of ids for files that we're treating as originals.
-          var originals = _.values(deduped).concat(_.keys(resolved));
+          var originals = _(deduped)
+            .values()
+            .concat(_.keys(resolved))
+            .unique()
+            .value();
 
           _.each(rows, function(row) {
             var file = row.file;
