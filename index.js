@@ -1,24 +1,31 @@
 var _         = require('lodash');
 var through   = require('through2');
 
-var resolved;
-var deduped;
+// Exports
+// ________________________
 
 exports = module.exports =
 
-  function(bundler, options) {
-    options = parseOptions(options);
+  function(bundler, packageMatcher) {
+    packageMatcher = parseOptions(packageMatcher);
 
-    resolved = {};
-    deduped = {};
+    function applyPlugins() {
+      var options = {
+        deduped: {},
+        resolved: {},
+        packageMatcher: packageMatcher
+      };
 
-    return bundler
-      .plugin(dedupeCache)
-      .plugin(dedupeResolutions, options);
+      return bundler
+        .plugin(dedupeCache, options)
+        .plugin(dedupeResolutions, options);
+    }
+
+    // Must re-attach plugins every time Browserify `reset`s as a new pipeline is created.
+    bundler.on('reset', applyPlugins);
+
+    return applyPlugins();
   };
-
-  exports.dedupeCache = dedupeCache;
-  exports.dedupeResolutions = dedupeResolutions;
 
   function parseOptions(options) {
     if(options === '*') {
@@ -32,6 +39,9 @@ exports = module.exports =
       return options;
     }
   }
+
+// Plugin implementations
+// ________________________
 
   /**
    * Custom Browserify deduper that exports the already instantiated module instead of
@@ -57,7 +67,10 @@ exports = module.exports =
    *
    * @param  {Object} bundler Browserify instance.
    */
-  function dedupeCache(bundler) {
+  function dedupeCache(bundler, options) {
+    var resolved = options.resolved;
+    var deduped = options.deduped;
+
     bundler.pipeline.get('dedupe')
       .splice(0, 1, through.obj(function(row, enc, next) {
         var id = row.dedupe && !row.dedupeIndex ? row.dedupe : row.dedupeIndex;
@@ -104,19 +117,24 @@ exports = module.exports =
    * TODO: Allow choosing a specific module version to bundle.
    *
    * @param  {Object} bundler Browserify instance.
-   * @param  {Array/String}  options List of modules to resolve a version for or "*" to attempt to resolve all.
+   * @param  {Array/String}  options.packageMatcher List of modules to resolve a version for or
+   *                                                "*" to attempt to resolve all.
    */
   function dedupeResolutions(bundler, options) {
     var modules = {};
-    var deps = {};
-    var index = {};
-    var rows = [];
+    var deps    = {};
+    var index   = {};
+    var rows    = [];
+
+    var resolved        = options.resolved;
+    var deduped         = options.deduped;
+    var packageMatcher  = options.packageMatcher;
 
     bundler.pipeline.on('package', function(package) {
       var name = package.name;
 
       // Does this package represent the module we're trying to resolve a version for?
-      if (name && (options.indexOf(name) !== -1 || options === '*')) {
+      if (name && (packageMatcher.indexOf(name) !== -1 || packageMatcher === '*')) {
         // Assume (safely?) that the first file emitted after a package is that package's `main`.
         bundler.pipeline.once('file', function(file) {
           modules[name] = modules[name] || [];
