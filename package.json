@@ -25,6 +25,7 @@
   "devDependencies": {
     "browserify": "^10.0.0",
     "chai": "^2.2.0",
-    "mocha": "^2.2.4"
+    "mocha": "^2.2.4",
+    "watchify": "^3.2.2"
   }
 }
