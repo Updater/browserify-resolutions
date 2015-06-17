@@ -184,14 +184,19 @@ exports = module.exports =
         },
         function end(cb) {
           _.each(modules, function(sources) {
+            var resolvedSource;
+
             if (sources.length < 2) {
               // Found no dupes, bail.
               return;
             }
 
-            // Let the first package we come across determine the version we resolve for.
-            // TODO?: Allow choosing a version, but that's more difficult.
-            var resolvedSource = sources.shift();
+            // Resolve the most shallow package (in terms of path length) as the "original".
+            // Otherwise, the bundle may be non-deterministic as the order of module-deps's
+            // package traversal currently isn't dependable.
+            // TODO?: Allow choosing a specific package version, but that's more difficult.
+            sources = _.sortBy(sources, 'length');
+            resolvedSource = sources.shift();
             resolved[resolvedSource] = true;
 
             // Dedupe the remaining sources
