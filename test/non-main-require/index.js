@@ -1,4 +1,4 @@
 module.exports = (function() {
-  require('lib-a1');
+  require('lib-a');
   require('lib-common/non-main');
 })();

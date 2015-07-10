@@ -1,6 +1,6 @@
 module.exports = (function() {
-  require('lib-a1');
-  require('lib-ab1');
-  require('lib-b1');
-  require('lib-c1');
+  require('lib-a');
+  require('lib-ab');
+  require('lib-b');
+  require('lib-c');
 })();
