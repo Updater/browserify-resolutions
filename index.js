@@ -141,11 +141,13 @@ exports = module.exports =
     function packageListener(package) {
       if (isResolvablePackage(package)) {
         if (isCachedPackage(package)) {
-          groupByPackage(package, join(package.__dirname, package.main));
+          groupByPackage(package, getMain(package));
         } else {
-          // Assuming first processed after this package is its `main`. Intead of just parsing out
-          // `main` ourselves, let `module-deps` handle it since it may be a custom field.
-          bundler.pipeline.once('file', _.partial(groupByPackage, package));
+          bundler.pipeline.once('file', function(file) {
+            if(isMain(package, file)) {
+              groupByPackage(package, file);
+            }
+          });
         }
       }
 
@@ -166,6 +168,14 @@ exports = module.exports =
 
         // Flag to grab these dependencies when available in our 'deps' stream handler.
         deps[file] = true;
+      }
+
+      function isMain(package, file) {
+        return getMain(package) === file;
+      }
+
+      function getMain(package) {
+        return join(package.__dirname, package.main);
       }
     }
 
