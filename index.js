@@ -1,6 +1,7 @@
 var _         = require('lodash');
 var through   = require('through2');
 var join      = require('path').join;
+var toString  = Object.prototype.toString;
 
 // Exports
 // ________________________
@@ -12,12 +13,14 @@ exports = module.exports =
    * See below for detailed write-ups on each.
    *
    * @param  {Object} bundler Browserify instance.
-   * @param  {Array/String} packageMatcher List of modules to resolve a version for or
+   * @param  {Object|Array<String>|String} packageMatcher List of modules to resolve a version for or
    *                                       "*" to attempt to resolve all.
    * @return {Object} Browserify instance.
    */
   function(bundler, packageMatcher) {
-    packageMatcher = parseOptions(packageMatcher);
+    packageMatcher = parseOptions(
+      toString.call(packageMatcher) === '[object Object]' ? packageMatcher._ : packageMatcher
+    );
 
     function applyPlugins() {
       var options = {
@@ -40,8 +43,9 @@ exports = module.exports =
   function parseOptions(options) {
     if(options === '*') {
       return options;
-    }
-    else if(_.isString(options)) {
+    } else if (_.isArray(options) && options.length === 1 && options[0] === '*') {
+      return options[0];
+    } else if(_.isString(options)) {
       return [options];
     } else if(!_.isArray(options)) {
       return [];
