@@ -19,7 +19,7 @@
     "test": "mocha"
   },
   "dependencies": {
-    "lodash": "^3.7.0",
+    "lodash": "^4.17.19",
     "through2": "^0.6.5"
   },
   "devDependencies": {
